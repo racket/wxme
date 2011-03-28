@@ -4,9 +4,11 @@
            mzlib/string
            mzlib/kw
            mzlib/class
-           mzlib/contract
+           racket/contract
            mzlib/list
            scheme/gui/dynamic
+           syntax/modread
+           (only racket/snip/private/snip int->img-type)
            "image.ss"
            "editor.ss"
            "private/compat.ss")
@@ -448,7 +450,7 @@
                      [h (read-inexact who port vers "image-snip height")]
                      [dx (read-inexact who port vers "image-snip x-offset")]
                      [dy (read-inexact who port vers "image-snip y-offset")]
-                     [rel? (read-integer who port vers "image-snip relative?")])
+                     [relative (read-integer who port vers "image-snip relative?")])
                  (let ([data
                         (and (and (equal? filename #"")
                                   (cvers . > . 1)
@@ -465,7 +467,10 @@
                                        (loop (add1 i))))))))])
                    (if (header-plain-text? header)
                        #"."
-                       (make-object image% (if data #f filename) data w h dx dy)))))]
+                       (make-object image%
+                         (if data #f filename)
+                         data w h dx dy
+                         relative (int->img-type type))))))]
             [else
              (if (header-skip-content? header)
                  #f
@@ -578,17 +583,9 @@
   ;; ----------------------------------------
 
   (define plain-params
-    (parameterize ([current-readtable #f]
-                   [read-accept-reader #f]
-                   [read-case-sensitive #t]
-                   [read-accept-graph #f]
-                   [read-accept-box #f]
-                   [read-accept-bar-quote #t]
-                   [read-decimal-as-inexact #t]
-                   [read-accept-dot #t]
-                   [read-accept-quasiquote #f]
-                   [read-accept-compiled #f])
-      (current-parameterization)))
+    (with-module-reading-parameterization
+     (lambda ()
+      (current-parameterization))))
 
   (define (plain-read port)
     (call-with-parameterization 
@@ -662,16 +659,20 @@
   (define/kw (wxme-port->text-port port #:optional [close? #t])
     (wxme-convert-port port close? #f))
 
-  (define (do-read port who read)
+  (define (do-read orig-port who read)
     (let ([port (if (gui-available?)
                     ;; GUI mode, since GRacket is available:
                     (let ([text% (dynamic-require 'mred 'text%)]
                           [open-input-text-editor (dynamic-require 'mred 'open-input-text-editor)])
                       (let ([t (new text%)])
-                        (send t insert-port port 'standard)
-                        (open-input-text-editor t 0 'end values (object-name port) #t)))
+                        (send t insert-port orig-port 'standard)
+                        (open-input-text-editor t 0 'end values (object-name orig-port) #t)))
                     ;; Non-GUI mode:
-                    (decode who port (lambda (x) x) #f #f))])
+                    (decode who orig-port (lambda (x) x) #f #f))])
+      ;; Turn on line counting if it was on before:
+      (let-values ([(line col pos) (port-next-location orig-port)])
+        (when line (port-count-lines! port)))
+      ;; Read:
       (let ([v (read port)])
         (let ([v2 (let loop ()
                     (let ([v2 (read port)])
@@ -706,8 +707,8 @@
         (values null null)))
 
   (provide/contract [is-wxme-stream? (input-port? . -> . any)]
-                    [wxme-port->text-port ((input-port?) (any/c) . opt-> . input-port?)]
-                    [wxme-port->port ((input-port?) (any/c (any/c . -> . any)) . opt-> . input-port?)]
+                    [wxme-port->text-port (->* (input-port?) (any/c) input-port?)]
+                    [wxme-port->port (->* (input-port?) (any/c (any/c . -> . any)) input-port?)]
                     [register-lib-mapping! (string? string? . -> . void?)]
                     [string->lib-path (string? any/c . -> . any)]
                     [extract-used-classes (input-port? . -> . any)])
