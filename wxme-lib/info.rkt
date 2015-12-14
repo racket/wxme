@@ -5,6 +5,7 @@
 (define deps '("scheme-lib"
                "base"
                "compatibility-lib"
+               "rackunit"
                "snip-lib"))
 
 (define pkg-desc "implementation (no documentation) part of \"wxme\"")
