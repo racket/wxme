@@ -3,7 +3,9 @@
 (define collection 'multi)
 
 (define deps '("rackunit"
-               "wxme-lib"))
+               "wxme-lib"
+               "base"
+               "snip-lib"))
 
 (define pkg-desc "tests for \"wxme\"")
 
