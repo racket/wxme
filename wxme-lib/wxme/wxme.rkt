@@ -487,7 +487,7 @@
                                              (cons
                                               (read-raw-string who port vers "image-snip image content")
                                               (loop (add1 i))))))))
-                                   (values #f 1.0))])
+                                   (values 1.0 #f))])
                    (if (header-plain-text? header)
                        #"."
                        (make-object image%
