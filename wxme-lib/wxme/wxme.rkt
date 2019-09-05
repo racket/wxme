@@ -18,7 +18,7 @@
     (expect #rx#"^01" port who "unrecognized format (not \"01\")")
     (let ([vers (string->number
                  (bytes->string/latin-1
-                  (expect #rx#"^0[1-8]" port who "unrecognized version")))])
+                  (expect #rx#"^0[1-9]" port who "unrecognized version")))])
       (unless (vers . < . 4)
         (expect #rx#"^ ##[ \r\n]" port who "missing \" ## \" tag in the expected place"))
       (let ([header (read-header who port vers snip-filter skip-content?)])
