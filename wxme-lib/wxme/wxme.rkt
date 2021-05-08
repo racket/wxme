@@ -385,8 +385,9 @@
      [(vers . >= . 8)
       (let ([v (plain-read port)])
         (unless (and (integer? v)
-                     (exact? v)
-                     (<= (- (expt 2 31)) v (expt 2 31)))
+                     (or (and (exact? v)
+                              (<= (- (expt 2 31)) v (expt 2 31)))
+                         (inexact? v)))
           (read-error who "exact integer between [-2^31,2^31]" what port))
         v)]
      [else
