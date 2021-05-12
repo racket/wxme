@@ -309,6 +309,14 @@
        (define size (read-integer who port vers what))
        (check-for #\newline)
        (define bts (read-bytes size port))
+       (unless (and (bytes? bts) (= (bytes-length bts) size))
+         (read-error who
+                     (format "expected ~a bytes, got ~a"
+                             size
+                             (if (bytes? bts)
+                                 (bytes-length bts)
+                                 bts))
+                     what port))
        (hash-set! previously-read-bytes id bts)
        (check-for #\newline)
        (check-for #\))
