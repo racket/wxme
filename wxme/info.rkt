@@ -9,3 +9,6 @@
 (define pkg-desc "Decoding the WXME graphical file format in a text-only environment")
 
 (define pkg-authors '(mflatt))
+
+(define license
+  '(Apache-2.0 OR MIT))
