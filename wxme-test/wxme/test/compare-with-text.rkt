@@ -8,12 +8,12 @@
 (define (run-tests)
   (check-equal? (let ([t (new text%)])
                   (send t insert "abc")
-                  (save-and-read t))
+                  (save-and-read t (set "wxtext")))
                 'abc)
 
   (check-equal? (let ([t (new text%)])
                   (send t insert "123")
-                  (save-and-read t))
+                  (save-and-read t (set "wxtext")))
                 123)
 
   (let ()
@@ -24,7 +24,7 @@
 
     (check-equal? (let ([t (new text%)])
                     (send t insert (make-object image-snip% bmp))
-                    (all-bmp->bytes (save-and-read t)))
+                    (all-bmp->bytes (save-and-read t (set "wximage"))))
                   (bmp->bytes bmp)))
 
   (let ()
@@ -36,7 +36,7 @@
     (check-equal? (let ([t (new text%)])
                     (send t insert (make-object image-snip% bmp))
                     (send t insert (make-object image-snip% bmp))
-                    (all-bmp->bytes (save-and-read t)))
+                    (all-bmp->bytes (save-and-read t (set "wximage"))))
                   (list 'begin
                         (bmp->bytes bmp)
                         (bmp->bytes bmp))))
@@ -49,7 +49,7 @@
 
     (check-equal? (let ([t (new text%)])
                     (send t insert (make-object image-snip% bmp))
-                    (bmp->bytes (send (save-and-read t) get-bitmap)))
+                    (bmp->bytes (send (save-and-read t (set "wximage")) get-bitmap)))
                   (bmp->bytes bmp)))
 
   (let ()
@@ -61,9 +61,25 @@
     (check-equal? (let ([t (new text%)])
                     (send t insert (make-object image-snip% bmp))
                     (send t insert (make-object image-snip% bmp))
-                    (all-bmp->bytes (save-and-read t)))
+                    (all-bmp->bytes (save-and-read t (set "wximage"))))
                   (list 'begin
                         (bmp->bytes bmp)
+                        (bmp->bytes bmp))))
+
+  (let ()
+    (define bmp (make-bitmap 100 100))
+    (define bdc (make-object bitmap-dc% bmp))
+    (send bdc draw-ellipse 10 10 80 80)
+    (send bdc set-bitmap #f)
+
+    (check-equal? (let ([t (new text%)])
+                    (send t insert (make-object image-snip% bmp))
+                    (send t insert "abcdef")
+                    (send t insert (make-object image-snip% bmp))
+                    (all-bmp->bytes (save-and-read t (set "wximage" "wxtext"))))
+                  (list 'begin
+                        (bmp->bytes bmp)
+                        'abcdef
                         (bmp->bytes bmp))))
 
 
@@ -120,9 +136,14 @@
     (check-equal? (read wx-port) i1)
     (check-equal? (read wx-port) i2)))
 
-(define (save-and-read t)
+(define (save-and-read t [expected-snip-classes #f])
   (define bp (open-output-bytes))
   (send t save-port bp)
+  (define-values (used-snip-classes used-data-classes)
+    (extract-used-classes (open-input-bytes (get-output-bytes bp))))
+  (unless (equal? expected-snip-classes (apply set used-snip-classes))
+    (error 'save-and-read "didn't find right classes\n  expected-snip-classes: ~s\n  used-snip-classes ~s"
+           expected-snip-classes used-snip-classes))
   (wxme-read (open-input-bytes (get-output-bytes bp))))
 
 (define (all-bmp->bytes x)
